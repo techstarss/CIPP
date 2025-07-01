@@ -65,11 +65,7 @@ const CippSchedulerForm = (props) => {
   const router = useRouter();
   const scheduledTaskList = ApiGetCall({
     url: "/api/ListScheduledItems",
-    queryKey: "ListScheduledItems-Edit-" + router.query.id,
-    waiting: !!router.query.id,
-    data: {
-      Id: router.query.id,
-    },
+    queryKey: "ListScheduledItems-Edit",
   });
 
   const tenantList = ApiGetCall({
@@ -79,13 +75,6 @@ const CippSchedulerForm = (props) => {
   useEffect(() => {
     if (scheduledTaskList.isSuccess && router.query.id) {
       const task = scheduledTaskList.data.find((task) => task.RowKey === router.query.id);
-
-      // Early return if task is not found
-      if (!task) {
-        console.warn(`Task with RowKey ${router.query.id} not found`);
-        return;
-      }
-
       const postExecution = task?.postExecution?.split(",").map((item) => {
         return { label: item, value: item };
       });
@@ -97,28 +86,9 @@ const CippSchedulerForm = (props) => {
         );
         if (commands.isSuccess) {
           const command = commands.data.find((command) => command.Function === task.Command);
-
-          // If command is not found in the list, create a placeholder command entry
-          let commandForForm = command;
-          if (!command && task.Command) {
-            commandForForm = {
-              Function: task.Command,
-              Parameters: [],
-              // Add minimal required structure for system jobs
-            };
-          }
-
           var recurrence = recurrenceOptions.find(
             (option) => option.value === task.Recurrence || option.label === task.Recurrence
           );
-
-          // If recurrence is not found in predefined options, create a custom option
-          if (!recurrence && task.Recurrence) {
-            recurrence = {
-              value: task.Recurrence,
-              label: `${task.Recurrence}`,
-            };
-          }
 
           // if scheduledtime type is a date, convert to unixtime
           if (typeof task.ScheduledTime === "date") {
@@ -134,15 +104,12 @@ const CippSchedulerForm = (props) => {
             },
             RowKey: router.query.Clone ? null : task.RowKey,
             Name: router.query.Clone ? `${task.Name} (Clone)` : task?.Name,
-            command: { label: task.Command, value: task.Command, addedFields: commandForForm },
+            command: { label: task.Command, value: task.Command, addedFields: command },
             ScheduledTime: task.ScheduledTime,
             Recurrence: recurrence,
             parameters: task.Parameters,
             postExecution: postExecution,
-            // Show advanced parameters if RawJsonParameters exist OR if it's a system command with no defined parameters
-            advancedParameters: task.RawJsonParameters
-              ? true
-              : !commandForForm?.Parameters || commandForForm.Parameters.length === 0,
+            advancedParameters: task.RawJsonParameters ? true : false,
           };
           formControl.reset(ResetParams);
         }
@@ -161,19 +128,13 @@ const CippSchedulerForm = (props) => {
   useEffect(() => {
     if (advancedParameters === true) {
       var schedulerValues = formControl.getValues("parameters");
-      // Add null check to prevent error when no command is selected
-      if (schedulerValues && typeof schedulerValues === "object") {
-        Object.keys(schedulerValues).forEach((key) => {
-          if (schedulerValues[key] === "" || schedulerValues[key] === null) {
-            delete schedulerValues[key];
-          }
-        });
-        const jsonString = JSON.stringify(schedulerValues, null, 2);
-        formControl.setValue("RawJsonParameters", jsonString);
-      } else {
-        // If no parameters, set empty object
-        formControl.setValue("RawJsonParameters", "{}");
-      }
+      Object.keys(schedulerValues).forEach((key) => {
+        if (schedulerValues[key] === "" || schedulerValues[key] === null) {
+          delete schedulerValues[key];
+        }
+      });
+      const jsonString = JSON.stringify(schedulerValues, null, 2);
+      formControl.setValue("RawJsonParameters", jsonString);
     }
   }, [advancedParameters]);
 
@@ -213,33 +174,15 @@ const CippSchedulerForm = (props) => {
             required={true}
             formControl={formControl}
             isFetching={commands.isFetching}
-            options={(() => {
-              const baseOptions =
-                commands.data?.map((command) => {
-                  return {
-                    label: command.Function,
-                    value: command.Function,
-                    addedFields: command,
-                  };
-                }) || [];
-
-              // If we're editing a task and the command isn't in the base options, add it
-              if (router.query.id && scheduledTaskList.isSuccess) {
-                const task = scheduledTaskList.data.find((task) => task.RowKey === router.query.id);
-                if (task?.Command && !baseOptions.find((opt) => opt.value === task.Command)) {
-                  baseOptions.unshift({
-                    label: task.Command,
-                    value: task.Command,
-                    addedFields: {
-                      Function: task.Command,
-                      Parameters: [],
-                    },
-                  });
-                }
-              }
-
-              return baseOptions;
-            })()}
+            options={
+              commands.data?.map((command) => {
+                return {
+                  label: command.Function,
+                  value: command.Function,
+                  addedFields: command,
+                };
+              }) || []
+            }
             validators={{
               validate: (value) => {
                 if (!value) {
@@ -268,25 +211,9 @@ const CippSchedulerForm = (props) => {
             name="Recurrence"
             label="Recurrence"
             formControl={formControl}
-            options={(() => {
-              let options = [...recurrenceOptions];
-
-              // If we're editing a task and the recurrence isn't in the base options, add it
-              if (router.query.id && scheduledTaskList.isSuccess) {
-                const task = scheduledTaskList.data.find((task) => task.RowKey === router.query.id);
-                if (task?.Recurrence && !options.find((opt) => opt.value === task.Recurrence)) {
-                  options.push({
-                    value: task.Recurrence,
-                    label: `Custom: ${task.Recurrence}`,
-                  });
-                }
-              }
-
-              return options;
-            })()}
+            options={recurrenceOptions}
             multiple={false}
             disableClearable={true}
-            creatable={true}
           />
         </Grid>
         {selectedCommand?.addedFields?.Synopsis && (

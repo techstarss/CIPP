@@ -39,7 +39,6 @@ import { useDialog } from "../../../../hooks/use-dialog";
 import { Grid } from "@mui/system";
 import DOMPurify from "dompurify";
 import { ClockIcon } from "@heroicons/react/24/outline";
-import ReactMarkdown from "react-markdown";
 
 const Page = () => {
   const router = useRouter();
@@ -1039,44 +1038,7 @@ const Page = () => {
                             >
                               <Info />
                             </Box>
-                            <Box
-                              sx={{
-                                // Style markdown links to match CIPP theme
-                                "& a": {
-                                  color: (theme) => theme.palette.primary.main,
-                                  textDecoration: "underline",
-                                  "&:hover": {
-                                    textDecoration: "none",
-                                  },
-                                },
-                                fontSize: "0.875rem", 
-                                lineHeight: 1.43,     
-                                "& p": {
-                                  my: 0,
-                                },
-                                flex: 1,
-                              }}
-                            >
-                              <ReactMarkdown
-                                components={{
-                                  // Make links open in new tab with security attributes
-                                  a: ({ href, children, ...props }) => (
-                                    <a
-                                      href={href}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      {...props}
-                                    >
-                                      {children}
-                                    </a>
-                                  ),
-                                  // Convert paragraphs to spans to avoid unwanted spacing
-                                  p: ({ children }) => <span>{children}</span>,
-                                }}
-                              >
-                                {standard.complianceDetails}
-                              </ReactMarkdown>
-                            </Box>
+                            <Typography variant="body2">{standard.complianceDetails}</Typography>
                           </Stack>
                         </Card>
                       </Grid>

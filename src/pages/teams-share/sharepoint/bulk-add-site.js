@@ -9,10 +9,10 @@ const BulkAddSiteForm = () => {
   const tenantFilter = useSettings().currentTenant;
 
   const fields = [
-    "siteName",
+    "SiteName",
     "siteDescription",
     "siteOwner",
-    "templateName",
+    "TemplateName",
     "siteDesign",
     "sensitivityLabel",
   ];
